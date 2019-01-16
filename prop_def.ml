@@ -18,7 +18,7 @@ let words = ref 0;;
 
 (******************** afficher type proposiiton *********************************)
 let rec print_term = function
-      |Var x    ->    print_string x
+      |Var x      ->    print_string x
       |Vrai       ->    print_string "vrai"
       |Faux       ->    print_string "faux"
       |OU(x,y)    ->   
@@ -26,15 +26,13 @@ let rec print_term = function
                        print_term x;
                        print_string "#";
                        print_term y;
-                       print_string ")"; 
-                   
+                       print_string ")";  
       |ET(x,y)    ->  
                        print_string "("; 
                        print_term x;
                        print_string "&";
                        print_term y;
                        print_string ")"; 
-                   
       |IMPLIQ(x,y)-> 
                        print_string "("; 
                        print_term x;
