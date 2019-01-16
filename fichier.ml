@@ -1,5 +1,6 @@
 open Prop_def;;
 
+(******************** recuprie 1er proposion (et/ou/neg) et envoye les var vers la fin de la list  *********************************)
 let order l = 
 	let rec local liste = function  
                 |[] -> liste  
@@ -8,70 +9,103 @@ let order l =
     in local [] l
 ;;
 
-let rec derivS gam  del = 
-  match (order gam ,  order del) with 
-  (gam', (IMPLIQ(a,b))::del')  -> 
+(*
+  @param1 : proposition list
+  @return : proposition list 
+  val print_term : proposition list -> proposition list = <fun>
+*)
+(************** appliqueles rehgles de calcul de SEQUENCE *****************)
+let rec appliqueTheoreme gauche  droit = 
+  match (order gauche ,  order droit) with 
+  |(gauche1, (IMPLIQ(a,b))::tl_droit)-> 
   						print_string "->Droit \t";
-    					print_theoreme([(gam,del)]);
-    					(derivS (a::gam') (b::del'))
-  |((IMPLIQ(a,b))::gam', del') -> 
+    					print_theoreme([(gauche,droit)]);
+    					(appliqueTheoreme (a::gauche1) (b::tl_droit))
+
+  |((IMPLIQ(a,b))::tl_gauche, droit1) -> 
   						print_string "->Gauche\t";
-    					print_theoreme([(gam,del)]);
-    					((derivS (gam')(a::del'))@(derivS (b::gam')(del')))
-  |(gam', (NEG(a))::del')  	 -> 
+              print_theoreme([(gauche,droit)]);
+    					((appliqueTheoreme (tl_gauche)(a::droit1))@(appliqueTheoreme (b::tl_gauche)(droit1)))
+  
+  |(gauche1, (NEG(a))::tl_droit)  	 -> 
   						print_string "~Droit  \t";
-    					print_theoreme([(gam,del)]);
-    					(derivS (a::gam') del')
-  |((NEG a)::gam',del') 	 -> 
+              print_theoreme([(gauche,droit)]);
+    					(appliqueTheoreme (a::gauche1) tl_droit)
+  
+  |((NEG a)::tl_gauche, droit1) 	 -> 
   						print_string "~Gauche \t"; 
-  						print_theoreme([(gam,del)]);
-    					(derivS (gam') (a::del'))
-  |((ET(a,b))::gam', del')  -> 
+              print_theoreme([(gauche,droit)]);
+    					(appliqueTheoreme (tl_gauche) (a::droit1))
+  
+  |((ET(a,b))::tl_gauche, droit1)  -> 
   						print_string "&Gauche \t";
-    					print_theoreme([(gam,del)]);
-    					(derivS (a::b::gam') del')
-  |(gam',(OU(a,b))::del')  	 -> 
+              print_theoreme([(gauche,droit)]);
+    					(appliqueTheoreme (a::b::tl_gauche) droit1)
+  
+  |(gauche1,(OU(a,b))::tl_droit)  	 -> 
   						print_string "#Droit  \t";
-    					print_theoreme([(gam,del)]);
-    					(derivS gam' (a::b::del'))
-  |((OU(a,b))::gam',del')	 -> 
+              print_theoreme([(gauche,droit)]); 
+    					(appliqueTheoreme gauche1 (a::b::tl_droit))
+  
+  |((OU(a,b))::tl_gauche,droit1)	 -> 
   						print_string "#Gauche \t";
-    					print_theoreme([(gam,del)]);
-    					((derivS (a::gam') del') @ (derivS (b::gam')(del')))
-  |(gam',(ET(a,b))::del')   -> 
+              print_theoreme([(gauche,droit)]);  (* nv arb *)
+    					((appliqueTheoreme (a::tl_gauche) droit1) @ (appliqueTheoreme (b::tl_gauche) (droit1)))
+  
+  |(gauche1,(ET(a,b))::tl_droit)   -> 
   						print_string "&Droit  \t";
-    					print_theoreme([(gam,del)]);
-    					((derivS (gam')(a::del'))@(derivS (gam')(b::del')))                             
-  |(_,_) 					 ->
+              print_theoreme([(gauche,droit)]); (* nv arb *)
+    					((appliqueTheoreme (gauche1)(a::tl_droit))@(appliqueTheoreme (gauche1) (b::tl_droit)))                             
+  
+  |(_,_) 					 -> (** le rest : vrai - faux - Var x**)
   						print_string"\t \t"; 
-  						print_theoreme([(gam,del)]);[(gam,del)]
+  						print_theoreme([(gauche,droit)]);[(gauche,droit)]
 ;;
 
+(*
+  @param1 : proposition list
+  @param2 : proposition list
+  @return : (proposition list * proposition list) list
+  return list des theoremes .... apres evaluation
+val appliqueTheoreme :
+  proposition list ->
+  proposition list -> (proposition list * proposition list) list = <fun>
+*)
 
-let rec demontrer = function
+(******************** verfie si les clause sont des theoremes **************************************)
+let demontrer l= 
+    let rec appartient_droit a droit =
+              match droit with
+                |[] -> false
+                |hd::tl_droit -> a=hd || appartient_droit a tl_droit
+    in let rec verfie_list gauche droit =
+              match gauche with
+                |[] -> false
+                |hd::tl_gauche -> appartient_droit hd droit || verfie_list tl_gauche droit
+    in let rec local = function
                 |[] -> true
-                |(gam, del)::l' -> (demontrer1  gam del) && (demontrer l')
-    and demontrer1 gam del =
-              match gam with
-                [] -> false
-                |a::gam' -> demontrer2 a del || demontrer1 gam' del
-    and demontrer2 a del =
-              match del with
-                [] -> false
-                |(b::del')-> a=b || demontrer2 a del'
+                |(gauche, droit)::tl -> (verfie_list gauche droit) && (local tl)
+    in local l            
 ;;
 
-
+(*
+  @param1 : ('a list * 'a list) list
+  @return : bool true si tout les clause  sont des theoremes sinon false 
+  val demontrer : ('a list * 'a list) list -> bool = <fun>
+*)
+(******************** test prouve .. afficher theoreme ou non *********************************)    
 let prouve_SEQUENCE p = 
-        if demontrer(derivS [] [p]) then
-			print_string " un theoreme. \n"
+    if demontrer(appliqueTheoreme [] [p]) then (* plasse theoreme a debut de proposition *)
+			print_string " un theoreme ... \n"
 		else 
-			print_string " n'est pas un theoreme. \n"
+			print_string " n'est pas un theoreme ... \n"
 ;;
 
-
-
-
+(*
+  @param1 : proposition
+  @return : unit 
+  val prouve_SEQUENCE : proposition -> unit = <fun>
+*)
 
 
 
